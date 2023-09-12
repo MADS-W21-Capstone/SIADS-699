@@ -1,17 +1,21 @@
-import argparse
-import os
-import sys
-import warnings
-from urllib.parse import urlparse
-
-import mlflow
-import pandas as pd
-from mlflow.models.signature import infer_signature
+from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error
 from sklearn.model_selection import train_test_split
+from mlflow.models.signature import infer_signature
+from urllib.parse import urlparse
+import joblib
+import mlflow.sklearn
+import mlflow
+import os
+import warnings
+import pandas as pd
+import numpy as np
+import argparse
+import sys
+from mlflow.tracking import MlflowClient
 
 sys.path.append('src/utils/')
-from data_wrangler import timeseries_to_supervise, fetch_topn_features, create_all_features
-from model_utils import evaluate_model, train_model, select_model
+from data_wrangler import create_all_features, fetch_topn_features
+from prophet_util import prepare_data_for_training, create_model, evaluate_model, prepare_data_for_predictions
 
 import logging
 logging.basicConfig(level=logging.WARN)
@@ -26,65 +30,64 @@ data_paths = {'RAW_DATA': 'datasets/rawdata/market_data/',
                  'TICKER_SENTIMENT': 'datasets/processed_data/agg_sentiment_scores/ticker_news_sent.csv',
                  'TICKERS': ['EIHOTEL.BO', 'ELGIEQUIP.BO', 'IPCALAB.BO', 'PGHL.BO',  'TV18BRDCST.BO'],
                  'TOPIC_IDS': [33, 921, 495, 495, 385]
+
              }
 
 agg_topic_ticker_sent_cols = ['agg_polarity', 'agg_compound', 'topic_polarity', 'topic_compound', 'ticker_polarity', 'ticker_compound']
-scoring = 'neg_mean_absolute_percentage_error'
 train_size = 0.8  # 80% for training, 20% for testing
-window_size = 10  # Number of past records to consider
+window_size = 10  # Number of past records to consider = 50
+topn_feature_count = 44
 target_price = 'ln_target'
-topn_feature_count = 50
 seed= 42
 
 # command to run the script
-# python src/scripts/training_evaluation/predict_byLightGBM-woSentiment.py LightGBM LightGBMwoSentiment datasets/processed_data/feature_importance/LightGBM/ datasets/processed_data/model_predictions/LightGBM/woSentiment/ 
+# python src/scripts/training_evaluation/train-predict-Prophet-wSentiment.py Prophet Prophet_wSentiment datasets/processed_data/feature_importance/LightGBM/ datasets/processed_data/model_predictions/Prophet/wSentiment/ trained_models/Prophet/
 
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     parser = argparse.ArgumentParser()
     parser.add_argument('MODEL_NAME', help='provide the ml model, for which we want to train/predict the data ')
-    parser.add_argument('EXPERIMENT_NAME', help='provide the experiment name, for which to run the training')    
-    parser.add_argument('FEATURE_PATH', help='path where to write/read computed shape values for feature importance')    
-    parser.add_argument('MODEL_PREDICTIONS', help='path where to write computed shape values for feature importance')
-    
+    parser.add_argument('EXPERIMENT_NAME', help='provide the experiment name, for which to run the training')   
+    parser.add_argument('FEATURE_PATH', help='path where to write/read computed shape values for feature importance')
+    parser.add_argument('MODEL_PREDICTIONS', help='path where to write computed shape values for feature importance')    
+    parser.add_argument('TRAINED_MODEL_PATH', help='path where to write computed shape values for feature importance')    
 
     args = parser.parse_args()
     # fetch topn features as per feature importance
+    # fetch topn features as per feature importance
     topn_features_df = fetch_topn_features(args.FEATURE_PATH, topn_feature_count)
     topn_features = topn_features_df['feature'].values.tolist()
-    topn_features = topn_features + ['yesterday_close', 'ln_target']        
     
-    # make predicttions for all tickers 
+    regressor_cols = topn_features + agg_topic_ticker_sent_cols    
+    prophet_train_cols = ['date', 'ln_target'] + regressor_cols
+    
     for indx, ticker in enumerate(data_paths['TICKERS']):
         topic_id = data_paths['TOPIC_IDS'][indx]
         
         path = data_paths['COMBINED_FEATURES'] + ticker + '.csv.gz'         
         if os.path.isfile(path):
-               combined_df = pd.read_csv(path)
+            combined_df = pd.read_csv(path)
         else:            
-        # create all the features
-            combined_df = create_all_features(data_paths, ticker, topic_id)        
-            combined_df.to_csv(path, index=False)
+            # create all the features
+            combined_df = create_all_features(data_paths, ticker, topic_id)                
+            combined_df.to_csv(path + ticker + '.csv', index=False)
 
+        
+        # extract date column for pre-processing
         combined_date_df = combined_df['date']
-        combined_df = combined_df.drop(columns='date')        
-                
+        
         # do train/test split the data with shuffle = False
-        train_data, test_data = train_test_split(combined_df.loc[:, topn_features], train_size=train_size, shuffle=False)
+        train_data, test_data = train_test_split(combined_df, train_size=train_size, shuffle=False)
         train_date, test_date = train_test_split(combined_date_df, train_size=train_size, shuffle=False)
         
-        # convert timeseries to be used in supervise learning model
-        X_train, y_train, indx_train = timeseries_to_supervise(train_data, window_size, target_price)  
-                
-#       aligned script as per teams conventin of 80/20 train/test split
         # further split test set to have an hold out set to be used for backtesting
-#         eval_data, test_data = train_test_split(test_data, train_size=0.5, shuffle=False)
-#         eval_date, test_date = train_test_split(test_date, train_size=0.5, shuffle=False)
-
-        # convert timeseries to be used in supervise learning model    
-        X_test, y_test, indx_test = timeseries_to_supervise(test_data, window_size, target_price)  
-                                    
-            
+        eval_data, test_data = train_test_split(test_data, train_size=0.5, shuffle=False)
+        eval_date, test_date = train_test_split(test_date, train_size=0.5, shuffle=False)        
+        
+        # prepare data for prophet model training/evaluation
+        train_df = prepare_data_for_training(train_data, prophet_train_cols)
+        eval_df = prepare_data_for_training(eval_data, prophet_train_cols)        
+        
         experiment_name = args.EXPERIMENT_NAME  # Replace with your desired experiment name
 
         # Create or get the experiment
@@ -96,23 +99,30 @@ if __name__ == "__main__":
 
         # Start an MLflow run with the specified experiment name
         with mlflow.start_run(experiment_id=experiment_id):
-            # choose the model as per provided arguments
-            model = select_model(args.MODEL_NAME, seed)
+            # create the model object as per provided arguments
+            pf_model = create_model(regressor_cols)    
             
-            # train the Random Forest model
-            trained_model = train_model(model, X_train, y_train)
+            # train the prophet model
+            trained_model = pf_model.fit(train_df)            
 
+#             model_path = args.TRAINED_MODEL_PATH + args.MODEL_NAME + '/'
+#             joblib.dump(trained_model,  args.TRAINED_MODEL_PATH + ticker + '.pkl')
+            
+            
+            # make dataframe for future predictions for days of eval dataset    
+            future = prepare_data_for_predictions(trained_model, train_df, train_date, eval_df, eval_date, regressor_cols)    
+            
             # evaluate the fitted model using mape and rmse metrics
-            predictions_df, mape, rmse = evaluate_model(trained_model, window_size, test_data, test_date, X_test, y_test)    
+            predictions_df, mape, rmse = evaluate_model(trained_model, future, eval_data, eval_df)
             predictions_df.to_csv(args.MODEL_PREDICTIONS + ticker + '.csv', header=True, index=False)
-            print("for ticker {0} mean absolute percentage error: {1}, root_mean_square_error: {2}".format(ticker, round(mape, 4), round(rmse, 4)))
             
-            
+            print("for ticker {0} mean absolute percentage error: {1}, root_mean_square_error: {2}".format(ticker, round(mape, 3), round(rmse, 3)))
+        
             mlflow.log_param("ticker", ticker)
             mlflow.log_param("target_price", target_price)
             mlflow.log_param("mape", round(mape, 5))    
             mlflow.log_param("rmse", round(rmse, 5))                
-            signature = infer_signature(X_train, predictions_df)
+            signature = infer_signature(train_df, predictions_df)
 
             tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
 
@@ -126,4 +136,5 @@ if __name__ == "__main__":
                     trained_model, "model", registered_model_name=args.MODEL_NAME, signature=signature
                 )
             else:
-                mlflow.sklearn.log_model(trained_model, "model", signature=signature)          
+                mlflow.sklearn.log_model(trained_model, "model", signature=signature)        
+
