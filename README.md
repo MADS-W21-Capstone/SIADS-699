@@ -15,17 +15,17 @@
 <code>cd path/to/target/script</code> <br/>
 <code>python3 <script_name></code>
 - Jupyter notebooks for Random Forest: <br/>
-  - notebooks/random_forest/random_forest_EIHOTEL.ipynb
-  - notebooks/random_forest/random_forest_ELGIEQUIP.ipynb
-  - notebooks/random_forest/random_forest_PGHL.ipynb
-  - notebooks/random_forest/random_forest_TV18BRDCST.ipynb
-  - notebooks/random_forest/random_forest_IPCALAB.ipynb
+  - src/notebooks/random_forest/random_forest_EIHOTEL.ipynb
+  - src/notebooks/random_forest/random_forest_ELGIEQUIP.ipynb
+  - src/notebooks/random_forest/random_forest_PGHL.ipynb
+  - src/notebooks/random_forest/random_forest_TV18BRDCST.ipynb
+  - src/notebooks/random_forest/random_forest_IPCALAB.ipynb
 - Jupyter notebooks for Linear Regression: <br/>
-  - notebooks/linear_regression/linear_regression_EIHOTEL.ipynb
-  - notebooks/linear_regression/linear_regression_ELGIEQUIP.ipynb
-  - notebooks/linear_regression/linear_regression_PGHL.ipynb
-  - notebooks/linear_regression/linear_regression_TV18BRDCST.ipynb
-  - notebooks/linear_regression/linear_regression_IPCALAB.ipynb
+  - src/notebooks/linear_regression/linear_regression_EIHOTEL.ipynb
+  - src/notebooks/linear_regression/linear_regression_ELGIEQUIP.ipynb
+  - src/notebooks/linear_regression/linear_regression_PGHL.ipynb
+  - src/notebooks/linear_regression/linear_regression_TV18BRDCST.ipynb
+  - src/notebooks/linear_regression/linear_regression_IPCALAB.ipynb
 - Jupyter notebooks for LSTM: <br/>
   - notebooks/LSTM_EIHOTEL_log_return.ipynb
   - notebooks/LSTM_ELGIEQUIP_log_return.ipynb
