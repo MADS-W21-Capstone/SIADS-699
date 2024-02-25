@@ -15,28 +15,11 @@
 <code>cd path/to/target/script</code> <br/>
 <code>python3 <script_name></code>
 - Jupyter notebooks for Random Forest: <br/>
-  - src/notebooks/random_forest/random_forest_EIHOTEL.ipynb
-  - src/notebooks/random_forest/random_forest_ELGIEQUIP.ipynb
-  - src/notebooks/random_forest/random_forest_PGHL.ipynb
-  - src/notebooks/random_forest/random_forest_TV18BRDCST.ipynb
-  - src/notebooks/random_forest/random_forest_IPCALAB.ipynb
+  - src/notebooks/random_forest/
 - Jupyter notebooks for Linear Regression: <br/>
-  - src/notebooks/linear_regression/linear_regression_EIHOTEL.ipynb
-  - src/notebooks/linear_regression/linear_regression_ELGIEQUIP.ipynb
-  - src/notebooks/linear_regression/linear_regression_PGHL.ipynb
-  - src/notebooks/linear_regression/linear_regression_TV18BRDCST.ipynb
-  - src/notebooks/linear_regression/linear_regression_IPCALAB.ipynb
+  - src/notebooks/linear_regression/
 - Jupyter notebooks for LSTM: <br/>
   - notebooks/LSTM_EIHOTEL_log_return.ipynb
-  - notebooks/LSTM_ELGIEQUIP_log_return.ipynb
-  - notebooks/LSTM_IPCALAB_log_return.ipynb
-  - notebooks/LSTM_PGHL_log_return.ipynb
-  - notebooks/LSTM_TV18BRDCST_log_return.ipynb
-  - notebooks/EIHOTEL_outcome_visualizations.ipynb
-  - notebooks/ELGIEQUIP_outcome_visualizations.ipynb
-  - notebooks/IPCALAB_outcome_visualizations.ipynb
-  - notebooks/PGHL_outcome_visualizations.ipynb
-  - notebooks/TV18BRDCST_outcome_visulaizations.ipynb
 - Python script for Prophet: <br/>
   - src/scripts/training_evaluation/train-predict-Prophet.py
 - Python script for LightGBM: <br/>
