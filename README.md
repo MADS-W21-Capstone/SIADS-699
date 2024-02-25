@@ -1,5 +1,5 @@
 # Indian Stock Market Prediction
-
+Project Report - https://github.com/MADS-W21-Capstone/SIADS-699/blob/main/Financial_Forecasting_Analysis-Indian_Stock_Market.pdf
 ## Getting Started
 
 - Clone the repository: <br/>
